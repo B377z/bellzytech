@@ -38,6 +38,18 @@ locals {
         }
       ]
       locations = ["cacn"]
+    },
+    {
+      subscription  = "tbb"
+      vnet_prefix   = "application-services"
+      vnet_new_bits = 4
+      subnets = [
+        {
+          subnet_prefix   = "app-test-subnet"
+          subnet_new_bits = "7" # /29
+        }
+      ]
+      locations = ["cacn"]
     }
 
   ]

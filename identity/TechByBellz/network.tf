@@ -1,11 +1,11 @@
-module "locations" {
+module "tbb_locations" {
   source = "../modules/locations"
   providers = {
     azurerm = azurerm.techbybellz
   }
 }
 
-module "subscriptions" {
+module "tbb_subscriptions" {
   source = "../modules/subscriptions"
   providers = {
     azurerm = azurerm.techbybellz
