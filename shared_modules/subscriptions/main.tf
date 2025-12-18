@@ -28,16 +28,19 @@ locals {
 
   # Useful reshapes
   subs_list = [
-    for key, v in local.subscriptions :
-    merge(v, { key = key })
+    for _, v in local.subscriptions :
+    v
   ]
 
   subs_by_id = {
-    for key, v in local.subscriptions :
-    v.id => merge(v, { key = key })
+    for _, v in local.subscriptions :
+    v.id => v
   }
 
-  current_base = try(local.subs_by_id[data.azurerm_client_config.client.subscription_id], null)
+  current_base = try(
+    local.subs_by_id[data.azurerm_client_config.client.subscription_id],
+    null
+  )
   current_full = local.current_base == null ? null : merge(
     local.current_base,
     {

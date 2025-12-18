@@ -91,12 +91,23 @@ locals {
       ]
     ]) : y.key => y
   }
+
+  tbb_intra_peerings = {
+    for vnet_key, v in local.tbb_hub_vnets :
+    vnet_key => {
+      loc       = v.loc
+      hub_key   = "shared_services-${v.loc}"
+      spoke_key = vnet_key
+    }
+
+    if v.cfg.vnet_prefix != "shared_services"
+  }
 }
 
 resource "azurerm_virtual_network" "tbb_hub" {
   provider            = azurerm.techbybellz
   for_each            = local.tbb_hub_vnets
-  name                = "${var.hub_vnet_name_prefix}-${each.value.loc}"
+  name                = "${var.hub_vnet_name_prefix}-${each.value.cfg.vnet_prefix}-${each.value.loc}"
   location            = var.location_names[each.value.loc]
   resource_group_name = var.tbb_rg_names[each.value.loc]
   address_space = [
@@ -198,4 +209,34 @@ resource "azurerm_subnet" "tfd_prd_subnets" {
       each.value.sidx
     )
   ]
+}
+
+# TBB shared_services (hub) → TBB application-services (spoke)
+resource "azurerm_virtual_network_peering" "tbb_hub_shr_to_app" {
+  provider                     = azurerm.techbybellz
+  for_each                     = local.tbb_intra_peerings
+  name                         = "tbb-shr-to-app-${each.value.loc}"
+  resource_group_name          = var.tbb_rg_names[each.value.loc]
+  virtual_network_name         = azurerm_virtual_network.tbb_hub[each.value.hub_key].name
+  remote_virtual_network_id    = azurerm_virtual_network.tbb_hub[each.value.spoke_key].id
+  allow_virtual_network_access = true
+  allow_forwarded_traffic      = true
+  allow_gateway_transit        = false
+  use_remote_gateways          = false
+}
+
+# TBB application-services (spoke) → TBB shared_services (hub)
+resource "azurerm_virtual_network_peering" "tbb_app_to_hub" {
+  provider = azurerm.techbybellz
+  for_each = local.tbb_intra_peerings
+
+  name                      = "tbb-app-to-shr-${each.value.loc}"
+  resource_group_name       = var.tbb_rg_names[each.value.loc]
+  virtual_network_name      = azurerm_virtual_network.tbb_hub[each.value.spoke_key].name
+  remote_virtual_network_id = azurerm_virtual_network.tbb_hub[each.value.hub_key].id
+
+  allow_virtual_network_access = true
+  allow_forwarded_traffic      = true
+  allow_gateway_transit        = false
+  use_remote_gateways          = false
 }
